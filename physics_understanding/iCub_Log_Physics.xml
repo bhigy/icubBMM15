@@ -1,0 +1,137 @@
+<application>
+    <name>iCub Logging Physics</name>
+
+    <dependencies>
+    </dependencies>
+
+    <module>
+        <name>yarpdatadumper</name>
+	    <parameters>--name /data/skin_events --txTime --rxTime</parameters>
+        <node>icub13</node>
+    </module>
+   
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/joints_head --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module> 
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/joints_torso --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/joints_leftArm --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/joints_rightArm --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/images/left --addVideo --type image --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/images/right --addVideo --type image --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/forces_leftArm --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/forces_rightArm --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/grasp_model_left --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data/grasp_model_right --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+
+    <connection>
+        <from>/skinManager/skin_events:o</from>
+	    <to>/data/skin_events</to>
+        <protocol>tcp</protocol>
+    </connection>
+     
+    <connection>
+        <from>/icub/head/state:o</from>
+        <to>/data/joints_head</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/torso/state:o</from>
+        <to>/data/joints_torso</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/left_arm/state:o</from>
+        <to>/data/joints_leftArm</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/right_arm/state:o</from>
+        <to>/data/joints_rightArm</to>
+        <protocol>tcp</protocol>
+    </connection>
+    
+    <connection>
+        <from>/icub/camcalib/left/out</from>
+        <to>/data/images/left</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/camcalib/right/out</from>
+        <to>/data/images/right</to>
+        <protocol>udp</protocol>
+    </connection>
+    
+    <connection>
+        <from>/icub/left_arm/analog:o</from>
+	    <to>/data/forces_leftArm</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/right_arm/analog:o</from>
+	    <to>/data/forces_rightArm</to>
+        <protocol>tcp</protocol>
+    </connection>
+
+    <connection>
+        <from>/actionsRenderingEngine/left_arm/grasp_model:o</from>
+        <to>/data/grasp_model_left</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/actionsRenderingEngine/right_arm/grasp_model:o</from>
+        <to>/data/grasp_model_right</to>
+        <protocol>tcp</protocol>
+    </connection>
+    
+</application>
