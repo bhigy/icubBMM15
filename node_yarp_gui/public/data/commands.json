@@ -1,0 +1,17 @@
+{
+    "home":[
+        "home","home head"
+    ],
+
+    "expect":[
+        "expect no_home","give no_home"
+    ],
+
+    "push":[
+        "weigh no_home","push (left 60 180)"
+    ],
+
+    "calib":[
+        "calib fingers", "calib table"
+    ]
+}

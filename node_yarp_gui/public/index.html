@@ -1,0 +1,335 @@
+<!doctype html>
+<html>
+  <head>
+    <title>YARP GUI</title>
+    <style>
+      html {height: 100%}
+      body {width:100%; height:100%; font: 13px Helvetica, Arial; }
+      #messages { list-style-type: none; margin: 0; }
+      #messages li { padding: 2px 10px; }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css">
+    <script src="jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+
+    <style type="text/css" media="screen">
+      
+      .flex-container {
+          display:flex;
+          flex-direction: column;
+          flex-wrap: nowrap;
+          justify-content: flex-start;
+          align-content: flex-start;
+          align-items: flex-start;
+          width:100%;
+          height:100%;
+      }
+          
+       
+       .flex-control-panel{
+
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+
+          overflow: auto;
+
+
+
+          width: 100%;
+          flex-grow: 3;
+          flex-shrink: 0;
+          /*flex-basis: 60%;*/
+        }
+        
+       .flex-console {
+          width: 100%;
+          flex-grow: 5;
+          flex-shrink: 0;
+          flex-basis: 30%;
+
+          overflow: scroll;
+
+          background-color: black;
+          color: green;
+
+
+          display: flex;
+          flex-direction: column;
+
+          justify-content: flex-end;
+          align-content: flex-end;
+          align-items: flex-start;
+
+          padding: 0;
+          padding-bottom: 0.4em;
+          padding-top: 0.4em;
+
+      }
+
+      .reply-from-server
+      {
+          color: tomato;
+      }
+       
+      .flex-commands {
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-start;
+
+          flex-wrap:wrap;
+
+
+          width: 100%;
+          flex-grow: 1;
+          flex-shrink: 0;
+
+          margin-top: 1em;
+          margin-bottom: 1em;
+
+      }
+
+      .flex-commands > form
+      {
+        padding-left:1em;
+        padding-right:1em; 
+      }
+
+
+
+
+       .flex-button-container
+       {
+          margin-bottom:0.1em;
+
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-start;
+    
+          background-color: white; 
+          
+          padding-left:1em;
+          padding-right:1em;
+
+
+
+       }
+
+        .flex-button-container:nth-child(odd) 
+        {
+          background-color: #eee; 
+        }
+
+       .flex-button
+       {
+          margin: 1em;
+         
+          width: 200px;
+          height: 50px;
+       }
+
+
+    </style>
+  
+
+
+  </head>
+  <body>
+    
+    <div class='flex-container'>
+      <div class='flex-control-panel' id='control_panel'>
+      </div>
+
+      <ul id="messages" class='flex-console'>
+          
+      </ul>
+
+
+      <div class='flex-commands'>
+        <form action = "" id = 'form-send-command' class="form-inline">
+          <div class="form-group">
+            <input type="text" class="form-control" id="m" placeholder="Command" disabled>
+          </div>
+          <button style="margin-right:0.4em" id='btn-send-command' type="submit" class="btn btn-default" disabled>Send</button>
+
+
+          <label class="radio-inline">
+            <input type="radio" name="arms" id="inlineRadio1" value="left"> Left
+          </label>
+          <label class="radio-inline" style="margin-left:0.2em">
+            <input type="radio" name="arms" id="inlineRadio2" value="right" checked> Right
+          </label>
+        </form>
+
+
+        <form action = "" id='form-port-connect' class="form-inline">      
+          <div class="form-group">
+            <input type="text" class="form-control" id="port-connect-id" value="/actionsRenderingEngine/cmd:io">
+          </div>
+          <button id='btn-port-connect' type="submit" class="btn btn-success">Connect</button>
+          <!-- <button id='btn-port-rpc' type="button" class="btn" onClick="toggleRPCbtn(this)" data-toggle="button" aria-pressed="false" autocomplete="off">
+            RPC
+          </button> -->
+        </form>
+
+      </div>
+
+
+    </div>
+
+    <script type="text/javascript" charset="utf-8" async defer>
+        $.get('data/commands.json',function(commands){
+
+          var control_panel=$('#control_panel');
+          for (var idx_cmd_family in commands) {
+              //create new row of buttons
+
+              var id_name = 'cmd_'+idx_cmd_family;
+              control_panel.append('<div id="'+id_name+'" class="flex-button-container"></div>');
+
+              for(var idx_cmd in commands[idx_cmd_family])
+              {
+                console.log()
+                  $('#'+id_name).append('<button type="button" onClick="sendCommand(\''+commands[idx_cmd_family][idx_cmd].toString()+'\')" class="btn btn-success flex-button">'+commands[idx_cmd_family][idx_cmd].toString()+'</button>');
+              }
+
+
+          }
+
+        });
+
+
+    </script>    
+
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/annyang/2.0.0/annyang.min.js"></script>
+    <script>
+      var socket = io();
+      $('#form-send-command').submit(function(){
+        socket.emit('chat message', $('#m').val());
+        $('#messages').append('<li><samp>$> '+$('#m').val()+'</samp></li>');
+        $('#m').val('');
+  
+        // if($('#btn-port-rpc').attr('aria-pressed')=="true")
+        // {
+          $('#m').attr('disabled',true);
+          $('#btn-send-command').attr('disabled',true);
+        // }
+
+        return false;
+      });
+
+
+      $('#form-port-connect').submit(function(){
+
+
+        if($('#port-connect-id').attr('disabled'))
+        {
+          socket.emit('close connection');
+        }
+        else
+        {
+          socket.emit('open connection', $('#port-connect-id').val());
+          $('#port-connect-id').attr('disabled',true);
+          $('#btn-port-connect').removeClass('btn-success');
+          $('#btn-port-connect').addClass('btn-danger');
+          $('#btn-port-connect').text('Disconnect');
+          // $('#btn-port-rpc').attr('disabled',true);
+
+          $('#m').removeAttr('disabled');
+          $('#btn-send-command').removeAttr('disabled');
+
+          $('#m').focus();
+        }
+
+        return false;
+      });
+      
+      // socket.on('chat message', function(msg){
+      //   console.log(msg);
+      //   $('#messages').append('<li><samp>$> '+msg+'</samp></li>');
+      // });
+
+      socket.on('reinstate writing',function(){
+        $('#m').removeAttr('disabled');
+        $('#btn-send-command').removeAttr('disabled');
+
+        $('#m').focus();
+      });
+            
+
+      socket.on('reply from server', function(msg){
+        console.log(msg);
+        $('#messages').append('<li><samp class="reply-from-server">$> Server: '+msg+'</samp></li>');
+      });
+
+
+      socket.on('connection closed', function(msg){
+        console.log(msg);
+          $('#port-connect-id').removeAttr('disabled');
+          $('#btn-port-connect').removeClass('btn-danger');
+          $('#btn-port-connect').addClass('btn-success');
+          $('#btn-port-connect').text('Connect');
+          // $('#btn-port-rpc').removeAttr('disabled');
+
+          $('#m').attr('disabled',true);
+          $('#btn-send-command').attr('disabled',true);
+      });        
+
+      // socket.on('chat message', function(msg){
+      //   console.log(msg);
+      //   $('#messages').append('<li><samp>$> '+msg+'</samp></li>');
+      // });
+
+
+      if (annyang) {
+        // Let's define a command.
+        var commands = {
+          'This is a *term': function(term) { socket.emit('chat message',term); }
+        };
+
+        // Add our commands to annyang
+        annyang.addCommands(commands);
+
+        // Start listening.
+        annyang.start();
+      }
+      
+    </script>
+
+
+   <script>
+      function sendCommand(command_msg)
+      {
+        if(!$('#m').attr('disabled'))
+        {
+          command_msg = command_msg + ' ' + $('input[name="arms"]:checked').val();
+
+          $('#messages').append('<li><samp>$> '+command_msg+'</samp></li>');
+          socket.emit('chat message', command_msg);
+
+          // if($('#btn-port-rpc').val())
+          // {
+          $('#m').attr('disabled',true);
+          $('#btn-send-command').attr('disabled',true);
+          // }
+
+        }
+      }
+
+
+      // function toggleRPCbtn(el)
+      // {
+      //   if($(el).hasClass('btn-primary'))
+      //     $(el).removeClass('btn-primary');
+      //   else
+      //     $(el).addClass('btn-primary');
+      // }
+
+   </script>
+
+
+  </body>
+</html>
