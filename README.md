@@ -6,4 +6,5 @@ Collection of modules, scripts, applications and whatnot that we have developed 
 
  * **matlab** -> yarp-matlab bindings under steroid
  * **physics_understading** -> stuff needed for the experiments about physics understanding
+ * **node_yarp_gui** -> GUI in html using a Node.js server to communicate with YARP 
  * ...
