@@ -389,6 +389,7 @@ public:
     bool grasp_tool(Bottle &options);
     bool release(Bottle &options);
     bool deploy(Bottle &options);
+    bool toss(Bottle &options);
     bool drawNear(Bottle &options);
     bool shiftAndGrasp(Bottle &options);
     bool expect(Bottle &options);

@@ -1683,14 +1683,19 @@ bool MotorThread::reach(Bottle &options)
     wbdRecalibration();
     action[arm]->enableContactDetection();
 
-    ActionPrimitivesWayPoint wp;
-    wp.x=xd+tmpDisp; wp.o=tmpOrient; wp.oEnabled=true;
-    deque<ActionPrimitivesWayPoint> wpList;
-    wpList.push_back(wp);
-    wp.x=xd;
-    wpList.push_back(wp);
-    action[arm]->enableReachingTimeout(3.0*reachingTimeout);
-    action[arm]->pushAction(wpList);
+    printf("tmpDisp = %f\n",tmpDisp[2] );
+
+    // ActionPrimitivesWayPoint wp;
+    // wp.x=xd+tmpDisp; wp.o=tmpOrient; wp.oEnabled=true; wp.trajTime=4.0;
+    // deque<ActionPrimitivesWayPoint> wpList;
+    // wpList.push_back(wp);
+    // wp.x=xd;
+    // wpList.push_back(wp);
+    // action[arm]->enableReachingTimeout(3.0*reachingTimeout);
+    // action[arm]->pushAction(wpList);
+
+    action[arm]->pushAction(xd+tmpDisp,playPianoEndOrient[arm],"open_hand",4.0);
+    action[arm]->pushAction(xd,playPianoEndOrient[arm],"open_hand",4.0);
 
     bool f;
     action[arm]->checkActionsDone(f,true);
@@ -2469,6 +2474,72 @@ bool MotorThread::deploy(Bottle &options)
 
     return true;
 }
+
+
+
+
+
+
+bool MotorThread::toss(Bottle &options)
+{
+
+    int arm=ARM_IN_USE;
+    if(checkOptions(options,"left") || checkOptions(options,"right"))
+        arm=checkOptions(options,"left")?LEFT:RIGHT;
+
+    arm=checkArm(arm);
+
+    Vector deployZone=deployPos[arm];
+
+    Vector deployPrepare,deployEnd;
+    deployPrepare=deployEnd=deployZone;
+
+    deployPrepare[2]=0.15;
+    deployEnd[2]=-0.05;
+
+    bool f=false;
+
+    if(!checkOptions(options,"no_head") && !checkOptions(options,"no_gaze"))
+    {
+        setGazeIdle();
+        ctrl_gaze->lookAtFixationPoint(deployEnd);
+    }
+
+
+
+    bool side=checkOptions(options,"side");
+    Vector tmpOrient,tmpDisp;
+
+
+    if(side)
+        tmpOrient=reachSideOrient[arm];
+    else
+        tmpOrient=reachAboveCata[arm];
+    
+
+
+    action[arm]->pushAction(deployPrepare,tmpOrient);
+    action[arm]->pushAction("release_hand");
+    action[arm]->pushAction("open_hand");
+
+    action[arm]->checkActionsDone(f,true);
+ 
+
+    if(!checkOptions(options,"no_head") && !checkOptions(options,"no_gaze"))
+        setGazeIdle();
+
+    goHome(options);
+
+    return true;
+
+}
+
+
+
+
+
+
+
 
 
 bool MotorThread::drawNear(Bottle &options)
@@ -3430,8 +3501,8 @@ bool MotorThread::startPlay(Bottle &options)
     action[1]->getCartesianIF(ctrl[1]);
 
     double thresh_touch[2];
-    thresh_touch[LEFT]=20.0;
-    thresh_touch[RIGHT]=30.0;
+    thresh_touch[LEFT]=50.0;
+    thresh_touch[RIGHT]=50.0;
 
 
 
@@ -3461,27 +3532,39 @@ bool MotorThread::startPlay(Bottle &options)
 
     bool f;
 
-    action[arm]->pushAction(playPianoStartPos[arm],playPianoStartOrient[arm],"play_piano_down");
+    if(!checkOptions(options,"no_left"))
+        action[arm]->pushAction(playPianoStartPos[arm],playPianoStartOrient[arm],"play_piano_down");
 
     arm=RIGHT;
-    action[arm]->pushAction(playPianoStartPos[arm],playPianoStartOrient[arm],"play_piano_down");
+    if(!checkOptions(options,"no_right"))
+        action[arm]->pushAction(playPianoStartPos[arm],playPianoStartOrient[arm],"play_piano_down");
 
     
     arm=LEFT;
-    action[arm]->checkActionsDone(f,true);
+    if(!checkOptions(options,"no_left"))
+        action[arm]->checkActionsDone(f,true);
     
     arm=RIGHT;
-    action[arm]->checkActionsDone(f,true);
+    if(!checkOptions(options,"no_right"))
+        action[arm]->checkActionsDone(f,true);
 
 
 
     // move arms down until they touch something
     arm=LEFT; 
-    action[arm]->pushAction(playPianoEndPos[arm],playPianoEndOrient[arm],"play_piano_down",9.0);
+    if(!checkOptions(options,"no_left"))
+    {
+        action[arm]->pushAction(playPianoEndPos[arm],playPianoEndOrient[arm],"play_piano_down",9.0);
+        action[arm]->enableReachingTimeout(9.0);
+    }
 
     arm=RIGHT;
-    action[arm]->pushAction(playPianoEndPos[arm],playPianoEndOrient[arm],"play_piano_down",9.0);
+    if(!checkOptions(options,"no_right"))
+    {
 
+        action[arm]->pushAction(playPianoEndPos[arm],playPianoEndOrient[arm],"play_piano_down",9.0);
+        action[arm]->enableReachingTimeout(9.0);
+    }
 
 
 
@@ -3489,8 +3572,14 @@ bool MotorThread::startPlay(Bottle &options)
 
     double currTime=Time::now();
     bool contact_detected[2];
-    contact_detected[LEFT]=false;
-    contact_detected[RIGHT]=false;
+    contact_detected[LEFT]=true;
+    contact_detected[RIGHT]=true;
+
+    if(!checkOptions(options,"no_left"))
+        contact_detected[LEFT]=false;
+    
+    if(!checkOptions(options,"no_right"))
+        contact_detected[RIGHT]=false;
 
     bool unknown_error=false;
     while(Time::now()-currTime<9.0)// && !contact_detected[LEFT] && !contact_detected[RIGHT] )
@@ -3499,6 +3588,12 @@ bool MotorThread::startPlay(Bottle &options)
         calibFingersMutex.wait();
         for(int idx_arm=0; idx_arm<=1; idx_arm++)
         {
+            if(idx_arm==LEFT && checkOptions(options,"no_left"))
+                continue;
+
+            if(idx_arm==RIGHT && checkOptions(options,"no_right"))
+                continue;
+
             if(bGraspModel[idx_arm].size()==0)
             {            
                 printf("[WARNING] Shoud not get here ########################################\n########################################\n########################################\n########################################\n");
@@ -3551,27 +3646,36 @@ bool MotorThread::startPlay(Bottle &options)
     // printf("Debug1\n");
 
     arm=LEFT;
-    ctrl[arm]->stopControl();
+    if(!checkOptions(options,"no_left"))
+        ctrl[arm]->stopControl();
+
     arm=RIGHT;
-    ctrl[arm]->stopControl();
+    if(!checkOptions(options,"no_right"))
+        ctrl[arm]->stopControl();
 
     // reactivate the torso
-    // arm=LEFT;
-    // ctrl[arm]->setDOF(oldPos[arm],oldPos[arm]);
-    // arm=RIGHT;
-    // ctrl[arm]->setDOF(oldPos[arm],oldPos[arm]);
+    arm=LEFT;
+    if(!checkOptions(options,"no_left"))
+        action[arm]->enableReachingTimeout(2.0);
 
+    arm=RIGHT;
+    if(!checkOptions(options,"no_right"))
+        action[arm]->enableReachingTimeout(2.0);
+ 
 
     // printf("Debug2\n");
-    ctrl[0]->restoreContext(context_left);
-    
-    // printf("Debug2bis\n");
-    ctrl[0]->deleteContext(context_left);
-
+    if(!checkOptions(options,"no_left"))
+    {
+        ctrl[0]->restoreContext(context_left);
+        ctrl[0]->deleteContext(context_left);
+    }
     // printf("Debug3\n");
 
-    ctrl[1]->restoreContext(context_right);
-    ctrl[1]->deleteContext(context_right);
+    if(!checkOptions(options,"no_right"))
+    {
+        ctrl[1]->restoreContext(context_right);
+        ctrl[1]->deleteContext(context_right);
+    }
 
     // printf("left: %i right: %i\nDebug4\n",contact_detected[LEFT],contact_detected[RIGHT]);
 
@@ -3601,26 +3705,23 @@ bool MotorThread::stopPlay(Bottle &options)
     }
       
 
-    // go to playing piano position
-    Vector x(3);
-    Vector o(4);
 
-    x[0]=-0.296394;
-    x[1]=-0.093094;
-    x[2]= 0.112518;
+    arm=LEFT;
+    if(!checkOptions(options,"no_left"))
+        action[arm]->pushAction(playPianoStartPos[arm],playPianoStartOrient[arm],"play_piano_idle");
+
+    arm=RIGHT;
+    if(!checkOptions(options,"no_right"))
+        action[arm]->pushAction(playPianoStartPos[arm],playPianoStartOrient[arm],"play_piano_idle");
+
     
-    o[0]=-0.225554;
-    o[1]=-0.022168;
-    o[2]=-0.973978;
-    o[3]= 2.973853;
-
-    x[2]+=0.13;
-
-
-    action[arm]->pushAction(x,o,"play_piano_idle");
-
     bool f;
-    action[arm]->checkActionsDone(f,true);
+    arm=LEFT;
+    if(!checkOptions(options,"no_left"))
+        action[arm]->checkActionsDone(f,true);
+    arm=RIGHT;
+    if(!checkOptions(options,"no_right"))
+        action[arm]->checkActionsDone(f,true);
 
     return true;
 }

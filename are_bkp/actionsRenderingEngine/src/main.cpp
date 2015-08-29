@@ -381,6 +381,7 @@ Windows, Linux
 
 #define CMD_OBSERVE                 VOCAB4('o','b','s','e')
 #define CMD_DROP                    VOCAB4('d','r','o','p')
+#define CMD_TOSS                    VOCAB4('t','o','s','s')
 
 #define CMD_HOLD                    VOCAB4('h','o','l','d')
 
@@ -404,7 +405,7 @@ Windows, Linux
 
 #define CMD_PLAY                    VOCAB4('p','l','a','y')
 #define CMD_START_PLAY              VOCAB4('s','t','p','l')
-#define CMD_STOP_PLAY              VOCAB4('s','p','p','l')
+#define CMD_STOP_PLAY               VOCAB4('s','p','p','l')
 
 //commands for tool
 #define CMD_TAKE_TOOL               VOCAB4('t','a','t','o')
@@ -1202,11 +1203,13 @@ public:
 
                         if(!motorThr->startPlay(command))
                         {
-                            printf("Sono fuori ma dentro!\n");
                             reply.addVocab(NACK);
 
                             if(!check(command,"no_home"))
+                            {
+                                motorThr->stopPlay(command);
                                 motorThr->goHome(command);
+                            }
 
                             break;
                         }
@@ -1261,6 +1264,22 @@ public:
                         idle = true;
                         break;
                     }
+
+
+
+                    case CMD_TOSS:
+                    {
+
+                        motorThr->toss(command);
+
+                        if(!check(command,"no_home"))
+                                motorThr->goHome(command);
+
+                        reply.addVocab(ACK);
+
+                        break;
+                    }
+
 
                     case CMD_TAKE:
                     {
