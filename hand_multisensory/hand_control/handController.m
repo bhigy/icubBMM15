@@ -1,5 +1,5 @@
 % Copyright: (C) 2015 iCub Facility
-% Authors: Giulia Pasquale, Tyler Bonnen
+% Authors: Giulia Pasquale
 % CopyPolicy: Released under the terms of the LGPLv2.1 or later, see LGPL.TXT
 
 classdef handController < handle
@@ -26,12 +26,20 @@ classdef handController < handle
         t0
         t1
         box_radius
+        box_step
         max_iter
         joint_tol
         
         pos_grid
         
-        joint0
+        joint_initial_conf
+        
+        joint4
+        joint5
+        joint6
+        jointFingers
+        
+        saved
         
     end
     
@@ -71,6 +79,24 @@ classdef handController < handle
             
             import yarp.Network
             
+            point(1,1) = -0.24;
+            if strcmp(obj.arm, 'right_arm')
+                point(1,2) = 0.28;
+            elseif strcmp(obj.arm, 'left_arm')
+                point(1,2) = -0.28;
+            else
+                obj.release();
+                error('Not valid hand!');
+            end
+            point(1,3) = 0.16;
+            
+            obj.box_radius = 0.1;
+            obj.box_step = 0.05;
+            
+            obj.pos_grid = makeBox(point, obj.box_radius, obj.box_step);
+            pos_grid = obj.pos_grid;
+            save('grid.mat', 'pos_grid');
+            
             net = Network();
             net.init();
             
@@ -80,7 +106,7 @@ classdef handController < handle
             
             obj.client = PolyDriver();
             if (~obj.client.open(option))
-                success = 0;
+                error('Failed to open PolyDriver!');
             end
             
             % open the view
@@ -92,8 +118,8 @@ classdef handController < handle
             
             obj.startup_context_id = obj.icart.storeContext();
             
-%             % set trajectory time
-%             obj.icart.setTrajTime(1.0);
+            % set trajectory time
+            obj.icart.setTrajTime(3.0);
 %             
 %             % get the torso dofs
 %             newDof = Vector();
@@ -126,22 +152,7 @@ classdef handController < handle
             
             obj.t0 = tic;
             obj.t1 = tic;
-            
-            tmpx = Vector();
-            tmpo = Vector();
-            tmpx.resize(3); % allocates the memory
-            tmpo.resize(4); % allocates the memory
-            obj.icart.getPose(tmpx, tmpo);
-            
-            point(1,1) = tmpx.get(0);
-            point(1,2) = tmpx.get(1);
-            point(1,3) = tmpx.get(2);
-            
-            obj.box_radius = 0.1;
-            %obj.pos_grid = makeBox(point, obj.box_radius);
-
-            obj.pos_grid = [point - obj.box_radius; point + obj.box_radius];
-            
+              
             obj.rpclient = RpcClient();
             obj.rpclient.close();
             disp('Going to open port /matlab/rpc_client');
@@ -183,13 +194,23 @@ classdef handController < handle
             
             obj.joint_tol = 2.0;
             
-            obj.joint0 = zeros(1,15);
+            obj.joint_initial_conf = zeros(1,15);
             
-            b = Bottle();
-            b = obj.readpose.read();  
-            for ii = 1:b.size()
-                obj.joint0(ii) = b.get(ii-1).asDouble();
-            end
+            obj.joint_initial_conf(4) = 20.0;
+            obj.joint_initial_conf(5) = 20.0;
+            obj.joint_initial_conf(6) = 20.0;
+            
+            obj.joint_initial_conf(7) = 20.0;
+            obj.joint_initial_conf(8) = 20.0;
+            obj.joint_initial_conf(9) = 20.0;
+            obj.joint_initial_conf(10) = 20.0;
+            obj.joint_initial_conf(11) = 10.0;
+            obj.joint_initial_conf(12) = 10.0;
+            obj.joint_initial_conf(13) = 10.0;
+            obj.joint_initial_conf(14) = 10.0;
+            obj.joint_initial_conf(15) = 10.0;
+            
+            obj.saved = 0;
             
         end
         
@@ -209,14 +230,67 @@ classdef handController < handle
             import yarp.IPositionControl
             import yarp.Property
             
-            % variables for hand movement
             wristJoints = [4 5 6];
-            wristBoundaries = [-90 90; -90 0; -20 40];
-            wristSegments = 1; % how many times to segment the range of motion
-            fingers = 7:15;
-            fingerBoundaries = [0 60; 10 90; 0 90; 0 180; 0 90; 0 180; 0 90; 0 180; 0 270];
+            fingers = 8:15;
+            
+            %wristBoundaries = [-90 90; -90 0; -20 40];
+            wristBoundaries = [-70 70; -70 0; -10 30];
+            wristSegments = 4;
+            
+            %fingerBoundaries = [0 60; 10 90; 0 90; 0 180; 0 90; 0 180; 0 90; 0 180; 0 270];
+            fingerBoundaries = [20 80; 10 80; 20 150; 10 80; 10 150; 10 80; 10 150; 10 240];
             fingerSegments = 3;
             
+            obj.joint4 = linspace(wristBoundaries(1,1), wristBoundaries(1,2), wristSegments);
+            if obj.saved==0
+                joint4 = obj.joint4;
+                save('joint4.mat', 'joint4');
+            end
+            
+            obj.joint5 = linspace(wristBoundaries(2,1), wristBoundaries(2,2), wristSegments);
+            if obj.saved ==0
+                joint5 = obj.joint5;
+                save('joint5.mat', 'joint5');
+            end
+            
+            obj.joint6 = linspace(wristBoundaries(3,1), wristBoundaries(3,2), wristSegments);
+            if obj.saved ==0
+                joint6 = obj.joint6;
+                save('joint6.mat', 'joint6');
+            end
+            
+            obj.jointFingers = cell(length(fingers),1);
+            for iFinger=1:length(fingers)
+                obj.jointFingers{iFinger} = linspace(fingerBoundaries(iFinger,1),fingerBoundaries(iFinger,2), fingerSegments);
+            end
+            if obj.saved==0
+                jointFingers = obj.jointFingers;
+                save('jointFingers.mat', 'jointFingers');
+                obj.saved = 1;
+            end
+                
+            cmd_string = ['set pos 7 ' num2str(obj.joint_initial_conf(7))];
+            cmd = Bottle();
+            reply = Bottle();
+            cmd.fromString(cmd_string);
+            obj.rpclient.write(cmd, reply);
+            %disp(reply.toString());
+            
+            b = Bottle();
+            b = obj.readpose.read();
+            count = 0;
+            while abs(b.get(7).asDouble() - obj.joint_initial_conf(7))>obj.joint_tol && count<obj.max_iter
+                pause(0.04);
+                b = Bottle();
+                b = obj.readpose.read();
+                count = count + 1;
+            end
+            if count==obj.max_iter
+                disp(['cannot set 7 to '  num2str(obj.joint_initial_conf(7))]);
+                disp(['7 = '  num2str(b.get(7).asDouble())]);
+            end
+            
+                                
             finishup = onCleanup(@() obj.release() );
             
             for ii = 1:size(obj.pos_grid,1)
@@ -261,16 +335,15 @@ classdef handController < handle
                 obj.printStatus();
                      
                 % start iterating through postures
-                
-                interval1 =  (abs(wristBoundaries(1,1)) + abs(wristBoundaries(1,2)))/wristSegments;
-                for wrist1Angle = wristBoundaries(1,1):interval1:wristBoundaries(1,2);
+         
+                for wrist1Angle = obj.joint4;
                     
                     cmd_string = ['set icmd cmod ' num2str(wristJoints(1)) ' pos'];
                     cmd = Bottle();
                     reply = Bottle();
                     cmd.fromString(cmd_string);
                     obj.rpclient.write(cmd, reply);
-                    disp(reply.toString());
+                    %disp(reply.toString());
                     
                     
                     cmd_string = ['set pos ' num2str(wristJoints(1)) ' '  num2str(wrist1Angle)];
@@ -278,7 +351,7 @@ classdef handController < handle
                     reply = Bottle();
                     cmd.fromString(cmd_string);
                     obj.rpclient.write(cmd, reply);
-                    disp(reply.toString());
+                    %disp(reply.toString());
                     
                     b = Bottle();
                     b = obj.readpose.read();  
@@ -293,24 +366,22 @@ classdef handController < handle
                         disp(['cannot set ' num2str(wristJoints(1)) ' to '  num2str(wrist1Angle)]);
                         disp([num2str(wristJoints(1)) ' = '  num2str(b.get(wristJoints(1)).asDouble())]);
                     end
-           
-                    interval2 = (abs(wristBoundaries(2,1)) + abs(wristBoundaries(2,2)))/wristSegments;
-                    
-                    for wrist2Angle = wristBoundaries(2,1):interval2:wristBoundaries(2,2);
+            
+                    for wrist2Angle = obj.joint5;
                         
                         cmd_string = ['set icmd cmod ' num2str(wristJoints(2)) ' pos'];
                         cmd = Bottle();
                         reply = Bottle();
                         cmd.fromString(cmd_string);
                         obj.rpclient.write(cmd, reply);
-                        disp(reply.toString());
+                        %disp(reply.toString());
                         
                         cmd_string = ['set pos ' num2str(wristJoints(2)) ' '  num2str(wrist2Angle)];
                         cmd = Bottle();
                         reply = Bottle();
                         cmd.fromString(cmd_string);
                         obj.rpclient.write(cmd, reply);
-                        disp(reply.toString());
+                        %disp(reply.toString());
                          
                         b = Bottle();
                         b = obj.readpose.read();
@@ -325,24 +396,22 @@ classdef handController < handle
                             disp(['cannot set ' num2str(wristJoints(2)) ' to '  num2str(wrist2Angle)]);
                             disp([num2str(wristJoints(2)) ' = '  num2str(b.get(wristJoints(2)).asDouble())]);
                         end
-                        
-                        interval3 =  (abs(wristBoundaries(3,1)) + abs(wristBoundaries(3,2)))/wristSegments;
-                        
-                        for wrist3Angle = wristBoundaries(3,1):interval3:wristBoundaries(3,2);
+                         
+                        for wrist3Angle = obj.joint6;
                             
                             cmd_string = ['set icmd cmod ' num2str(wristJoints(3)) ' pos'];
                             cmd = Bottle();
                             reply = Bottle();
                             cmd.fromString(cmd_string);
                             obj.rpclient.write(cmd, reply);
-                            disp(reply.toString());
+                            %disp(reply.toString());
                             
                             cmd_string = ['set pos ' num2str(wristJoints(3)) ' '  num2str(wrist3Angle)];
                             cmd = Bottle();
                             reply = Bottle();
                             cmd.fromString(cmd_string);
                             obj.rpclient.write(cmd, reply);
-                            disp(reply.toString());
+                            %disp(reply.toString());
                              
                             b = Bottle();
                             b = obj.readpose.read();
@@ -359,17 +428,17 @@ classdef handController < handle
                             end
                     
                             % iterate through the fingers for each given wrist angle
+                            
                             for iFinger = 1:length(fingers)
-                                
-                                interval = (abs(fingerBoundaries(iFinger,1))+abs(fingerBoundaries(iFinger,2)))/fingerSegments;
-                                for fingerAngle = fingerBoundaries(iFinger,1):interval:fingerBoundaries(iFinger,2)
+                                   
+                                for fingerAngle = obj.jointFingers{iFinger}
                                     
                                     cmd_string = ['set pos ' num2str(fingers(iFinger)) ' '  num2str(fingerAngle)];
                                     cmd = Bottle();
                                     reply = Bottle();
                                     cmd.fromString(cmd_string);
                                     obj.rpclient.write(cmd, reply);
-                                    disp(reply.toString());
+                                    %disp(reply.toString());
                                      
                                     b = Bottle();
                                     b = obj.readpose.read();
@@ -389,28 +458,29 @@ classdef handController < handle
                                 
                                 % return each finger to neutral before moving to the next
                                     
-                                cmd_string = ['set pos ' num2str((fingers(iFinger))) ' '  num2str(obj.joint0(iFinger))];
+                                cmd_string = ['set pos ' num2str((fingers(iFinger))) ' '  num2str(obj.joint_initial_conf(fingers(iFinger)))];
                                 cmd = Bottle();
                                 reply = Bottle();
                                 cmd.fromString(cmd_string);
                                 obj.rpclient.write(cmd, reply);
-                                disp(reply.toString());
+                                %disp(reply.toString());
                                  
                                 b = Bottle();
                                 b = obj.readpose.read();
                                 count = 0;
-                                while abs(b.get(fingers(iFinger)).asDouble() - obj.joint0(iFinger))>obj.joint_tol && count<obj.max_iter
+                                while abs(b.get(fingers(iFinger)).asDouble() - obj.joint_initial_conf(fingers(iFinger)))>obj.joint_tol && count<obj.max_iter
                                     pause(0.04);
                                     b = Bottle();
                                     b = obj.readpose.read();
                                     count = count + 1;
                                 end
                                 if count==obj.max_iter
-                                    disp(['cannot set ' num2str(fingers(iFinger)) ' to '  num2str(obj.joint0(iFinger))]);
+                                    disp(['cannot set ' num2str(fingers(iFinger)) ' to '  num2str(obj.joint_initial_conf(fingers(iFinger)))]);
                                     disp([num2str(fingers(iFinger)) ' = '  num2str(b.get(fingers(iFinger)).asDouble())]);
                                 end
                                 
                             end
+                            
                         end
                     end
                 end
