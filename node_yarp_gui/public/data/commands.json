@@ -11,6 +11,10 @@
         "weigh no_home","push (left 60 180)"
     ],
 
+    "touch":[
+        "touch (left 100 180)","toss side","toss"
+    ],
+
     "calib":[
         "calib fingers", "calib table"
     ]

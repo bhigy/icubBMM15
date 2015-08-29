@@ -1,5 +1,5 @@
 {
-  "name": "yarp-gui ",
+  "name": "yarp-gui",
   "version": "0.0.1",
   "description": "Yarp basic comunication for ARE",
   "dependencies": {

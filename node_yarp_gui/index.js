@@ -50,15 +50,16 @@ function connectToYarpPort(port_name)
       port=response.substring(idx_port+5,idx_type-1);
 
       client = net.connect(port,host, function() { //'connect' listener
-        client.write('CONNECT Yarpino\nj\n');
-
+       client.write('CONNECT Yarpino\nj\n');
+        //client.write('Y'A' 0x61 0x1E 0 0 R'P'')
+        
         // send the message to notify the client that we got disconnected
         client.on('end',function(){
           io.emit('connection closed');
         });
 
         client.on('data', function(data) {
-
+          console.log('####'+data.toString());
 
           // if(data.toString().substr(0,6)=='Welcome')
           //   io.emit('reply from server',data.toString());
@@ -105,23 +106,31 @@ var custom_port = '3000';
 if(process.argv.indexOf('--port') != -1)
   custom_port=process.argv[process.argv.indexOf("--port") + 1];
 
-if(process.argv.indexOf('--host') != -1)
-{
-    custom_host = process.argv[process.argv.indexOf("--host") + 1];
-    http.listen(custom_port,custom_host, function(){
-        console.log('listening on '+custom_host+':'+custom_port);
-      });
-}
-else
+
+var custom_host = '127.0.0.1';
+if(process.argv.indexOf('--host') == -1)
 {
   // find the current ip and run server there
   var ifaces = os.networkInterfaces();
-  for(idx_iface in ifaces['en0'])
-    if(ifaces['en0'][idx_iface].family=='IPv4')    
-      http.listen(custom_port,ifaces['en0'][idx_iface].address, function(){
-        console.log('listening on '+ifaces['en0'][idx_iface].address+':'+custom_port);
-      });
+
+  var iface_val;
+  if(ifaces.hasOwnProperty('en0'))
+    iface_val='en0';
+  else if(ifaces.hasOwnProperty('eth0'))
+    iface_val='eth0';
+
+
+  for(idx_iface in ifaces[iface_val])
+    if(ifaces[iface_val][idx_iface].family=='IPv4')
+      custom_host=ifaces[iface_val][idx_iface].address;
 }
+else
+  custom_host = process.argv[process.argv.indexOf("--host") + 1];
 
 
+
+// finally, start the server!
+http.listen(custom_port,custom_host, function(){
+    console.log('listening on '+custom_host+':'+custom_port);
+  });
 

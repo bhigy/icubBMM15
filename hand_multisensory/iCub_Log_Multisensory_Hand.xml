@@ -1,0 +1,90 @@
+<application>
+    <name>iCub Mulitsensory Hand Data</name>
+
+    <dependencies>
+    </dependencies>
+
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/joints_head  --downsample 4 --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module> 
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/joints_torso  --downsample 4 --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/joints_rightArm  --downsample 4 --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/images/left --type image  --downsample 4 --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/images/right --type image  --downsample 4 --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/endeffector2D/left --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+    <module>
+        <name>yarpdatadumper</name>
+        <parameters>--name /data_ms_hand/endeffector2D/right --txTime --rxTime</parameters>
+        <node>icub13</node>
+        <stdio></stdio>
+    </module>
+
+
+     
+    <connection>
+        <from>/icub/head/state:o</from>
+        <to>/data_ms_hand/joints_head</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/torso/state:o</from>
+        <to>/data_ms_hand/joints_torso</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/right_arm/state:o</from>
+        <to>/data_ms_hand/joints_rightArm</to>
+        <protocol>tcp</protocol>
+    </connection>
+    
+    <connection>
+        <from>/icub/camcalib/left/out</from>
+        <to>/data_ms_hand/images/left</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/icub/camcalib/right/out</from>
+        <to>/data_ms_hand/images/right</to>
+        <protocol>udp</protocol>
+    </connection>
+    <connection>
+        <from>/matlab/left/endeffector2D:o</from>
+        <to>/data_ms_hand/endeffector2D/left</to>
+        <protocol>tcp</protocol>
+    </connection>
+    <connection>
+        <from>/matlab/right/endeffector2D:o</from>
+        <to>/data_ms_hand/endeffector2D/right</to>
+        <protocol>tcp</protocol>
+    </connection>
+    
+    
+</application>
