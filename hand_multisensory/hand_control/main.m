@@ -9,4 +9,4 @@ MAX_TORSO_PITCH = double(30.0);  % [deg]
 mod = handController('right_arm');
 
 mod.init();
-mod.run();
+mod.run(1, 1, 1, 1);
