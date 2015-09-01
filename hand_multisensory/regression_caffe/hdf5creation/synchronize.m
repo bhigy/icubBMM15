@@ -1,6 +1,6 @@
 %%
 
-path_vector = '/media/giulia/DATA/humanoids2015/dumpings/bbball2/pf3dTracker_data/data.log';
+path_vector = '/Users/giulia/DATASETS/joints_leftArm/data.txt';
 
 fid = fopen(path_vector,'r');
 if (fid==-1)
@@ -16,14 +16,15 @@ elseif ispc
     vector_count = str2num(vector_count((last_space(end)+1):(end-1)));
 end
 
-vector_cell = textscan(fid, '%d %f %f %f %f %f %d %d %d', vector_count);
+vector_cell = textscan(fid, '%d %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f', vector_count);
 vector_cell(1) = [];
+vector_cell(2) = [];
 
 fclose(fid);
 
 %%
 
-path_image = '/media/giulia/DATA/humanoids2015/dumpings/bbball2/nearBlobber_blobs/data.log';
+path_image = '/Users/giulia/DATASETS/left_data/data.txt';
 
 fid = fopen(path_image,'r');
 if (fid==-1)
@@ -39,43 +40,43 @@ elseif ispc
     img_count = str2num(img_count((last_space(end)+1):(end-1)));
 end
 
-image_cell = textscan(fid, '%d %f %d %d %d', img_count);
+image_cell = textscan(fid, '%d %f %f %s', img_count);
 image_cell(1) = [];
+image_cell(2) = [];
 
 fclose(fid);
 
-Tstart = 1435307624.000000;
+Tstart = 1440966540.000000;
 
 image_cell{1} = image_cell{1} - Tstart;
-vector_cell{1} = vector_cell{1} - Tstart - 1.21;
+vector_cell{1} = vector_cell{1} - Tstart;
 
 %%
 
-time_window = 5;
+time_window = 30;
 
-path_association = '/media/giulia/DATA/humanoids2015/dumpings/bbball2/pfdata_blobberblobs/data_blobs.txt';
-path_vector = '/media/giulia/DATA/humanoids2015/dumpings/bbball2/pfdata_blobberblobs/data.txt';
-path_image = '/media/giulia/DATA/humanoids2015/dumpings/bbball2/pfdata_blobberblobs/blobs.txt';
+path_association = '/Users/giulia/DATASETS/image_vector.txt';
+path_vector = '/Users/giulia/DATASETS/vector.txt';
+path_image = '/Users/giulia/DATASETS/image.txt';
 
 fid = fopen(path_association,'w');
 if (fid==-1)
     error('Error!');
 end
 
-fid_pf = fopen(path_vector,'w');
-if (fid_pf==-1)
+fid_vector = fopen(path_vector,'w');
+if (fid_vector==-1)
     error('Error!');
 end
 
-fid_disp = fopen(path_image,'w');
-if (fid_disp==-1)
+fid_image = fopen(path_image,'w');
+if (fid_image==-1)
     error('Error!');
 end
 
-ass_cell = zeros(2, 2, img_count);
-ass_timestamp = zeros(img_count, 2);
+ass_cell = cell(1, 4);
 
-for idx_img = 1:img_count
+for idx_img = 1:(img_count-10)
     
     t_image = image_cell{1}(idx_img);
     
@@ -114,18 +115,17 @@ for idx_img = 1:img_count
         end
     end
     
-    ass_timestamp(idx_img, 1) = vector_cell{1}(start_idx_vector);
-    ass_timestamp(idx_img, 2) = image_cell{1}(idx_img);
+    tmp_v = zeros(1,16);
+    for ii=0:15  
+        tmp_v(ii+1) = vector_cell{2+ii}(start_idx_vector);
+    end
     
-    ass_cell(1, :, idx_img) = [image_cell{2}(idx_img) image_cell{3}(idx_img)];
-    ass_cell(2, :, idx_img) = [vector_cell{6}(start_idx_vector) vector_cell{7}(start_idx_vector)];
-    
-    fprintf(fid, '%.6f %d %d %.6f %d %d\n', ass_timestamp(idx_img, 1), ass_cell(1, 1, idx_img), ass_cell(1, 2, idx_img), ass_timestamp(idx_img, 2), ass_cell(2, 1, idx_img), ass_cell(2, 2, idx_img));
-    fprintf(fid_disp, '%.6f %d %d\n', ass_timestamp(idx_img, 1), ass_cell(1, 1, idx_img), ass_cell(1, 2, idx_img));
-    fprintf(fid_pf, '%.6f %d %d\n', ass_timestamp(idx_img, 2), ass_cell(2, 1, idx_img), ass_cell(2, 2, idx_img));
+    fprintf(fid, '%.6f %s %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n', image_cell{1}(idx_img), image_cell{2}{idx_img}, vector_cell{1}(start_idx_vector), tmp_v);
+    fprintf(fid_image, '%s\n', image_cell{2}{idx_img});
+    fprintf(fid_vector, '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n', tmp_v);
     
 end
 
 fclose(fid);
-fclose(fid_disp);
-fclose(fid_pf);
+fclose(fid_image);
+fclose(fid_vector);

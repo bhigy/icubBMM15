@@ -13,7 +13,7 @@ classdef MyDataset < handle %matlab.mixin.Copyable %hgsetget
      
         DsetMeanImg
         
-        OverSample
+        Oversample
         
     end
     
@@ -23,7 +23,7 @@ classdef MyDataset < handle %matlab.mixin.Copyable %hgsetget
             
             obj.DsetMeanImg = load(mean_img_path);
             
-            obj.OverSample = oversample;
+            obj.Oversample = oversample;
             
         end
         
@@ -185,7 +185,7 @@ classdef MyDataset < handle %matlab.mixin.Copyable %hgsetget
             
             % compute the dims
             im_DIM = size(im);
-            im_mean_DIM = size(obj.DsetMeanImg);
+            im_mean_DIM = size(obj.DsetMeanImg.mean_data);
             
             % set crop dim
             CROP_SIZE = 227;
@@ -200,7 +200,7 @@ classdef MyDataset < handle %matlab.mixin.Copyable %hgsetget
             end
             
             % permute from RGB to BGR (IMAGE_MEAN is already BGR)
-            im = im(:,:,[3 2 1]) - IMAGE_MEAN;
+            im = im(:,:,[3 2 1]) - obj.DsetMeanImg.mean_data;
             
             if obj.Oversample==1 && sum(im_mean_DIM(1:2)==CROP_SIZE)
                 
@@ -218,11 +218,7 @@ classdef MyDataset < handle %matlab.mixin.Copyable %hgsetget
                 curr = 1;
                 for i = [0 h_off]
                     for j = [0 w_off]
-                        if NUM_CHANNELS==3
-                            images(:, :, :, curr) = permute(im(i:i+CROP_SIZE-1, j:j+CROP_SIZE-1, :), [2 1 3]);
-                        else
-                            images(:, :, :, curr) = im(i:i+CROP_SIZE-1, j:j+CROP_SIZE-1)';
-                        end
+                        images(:, :, :, curr) = permute(im(i:i+CROP_SIZE-1, j:j+CROP_SIZE-1, :), [2 1 3]);
                         images(:, :, :, curr+5) = images(end:-1:1, :, :, curr);
                         curr = curr + 1;
                     end
@@ -239,16 +235,12 @@ classdef MyDataset < handle %matlab.mixin.Copyable %hgsetget
                 % pick only the central crop
                 h_off = ceil(( im_mean_DIM(1)-CROP_SIZE) / 2);
                 w_off = ceil(( im_mean_DIM(2)-CROP_SIZE) / 2);
-                if NUM_CHANNELS==3
-                    images = permute(im(h_off:h_off+CROP_SIZE-1,w_off:w_off+CROP_SIZE-1,:), [2 1 3]);
-                else
-                    images = im(h_off:h_off+CROP_SIZE-1,w_off:w_off+CROP_SIZE-1)';
-                end
+                images = permute(im(h_off:h_off+CROP_SIZE-1,w_off:w_off+CROP_SIZE-1,:), [2 1 3]);
                 
             end
             
             % normalize for HDF5 format
-            images = images/255.0;
+            %images = images/255.0;
             
             
         end
