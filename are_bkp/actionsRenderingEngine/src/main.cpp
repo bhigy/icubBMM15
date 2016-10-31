@@ -401,6 +401,7 @@ Windows, Linux
 #define CMD_WEIGH                   VOCAB4('w','e','i','g')
 #define CMD_CLOSE                   VOCAB4('c','l','o','s')
 #define CMD_GAZE                    VOCAB4('r','e','l','e')
+#define CMD_WRIST                   VOCAB4('w','r','i','s')
 
 
 #define CMD_PLAY                    VOCAB4('p','l','a','y')
@@ -1177,7 +1178,6 @@ public:
 
                     case CMD_WEIGH:
                     {
-
                         motorThr->weigh(command);
 
                         if(!check(command,"no_home"))
@@ -1433,6 +1433,19 @@ public:
                         }
 
                         reply.addVocab(ACK);
+                        break;
+                    }
+                    
+                    case CMD_WRIST:
+                    {
+
+                        motorThr->wristRotate(command);
+
+                        if(!check(command,"no_home"))
+                                motorThr->goHome(command);
+
+                        reply.addVocab(ACK);
+
                         break;
                     }
 

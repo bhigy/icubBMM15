@@ -6,6 +6,10 @@
 set(PROJECTNAME actionsRenderingEngine)
 project(${PROJECTNAME})
 
+find_package(YARP REQUIRED)
+find_package(ICUB REQUIRED)
+find_package(OpenCV REQUIRED)
+
 set(folder_source src/main.cpp
                   src/utils.cpp
                   src/MotorThread.cpp
@@ -28,3 +32,4 @@ target_link_libraries(${PROJECTNAME} iKin actionPrimitives ${OpenCV_LIBRARIES}
 
 install(TARGETS ${PROJECTNAME} DESTINATION bin)
 
+#target_link_libraries( main ${OpenCV_LIBS} ) 

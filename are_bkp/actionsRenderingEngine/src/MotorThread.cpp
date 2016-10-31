@@ -2066,8 +2066,67 @@ bool MotorThread::give(Bottle &options)
     return true;
 }
 
+bool MotorThread::wristRotate(Bottle &options)
+{
+	int arm=ARM_IN_USE;
+    if(checkOptions(options,"left") || checkOptions(options,"right"))
+        arm=checkOptions(options,"left")?LEFT:RIGHT;
+    arm=checkArm(arm);
+    
+    if(!checkOptions(options,"no_head") && !checkOptions(options,"no_gaze"))
+    {
+        setGazeIdle();
+        lookAtHand(options);
+    }
+    
+    int idx_wrist = 4; // <---- Not sure it is joint number 4. For sure it is the 4 on the robot motor gui though.
 
+	ICartesianControl *ctrl;
+    action[arm]->getCartesianIF(ctrl);
+    
+    // Modifying speed
+    Vector new_vels(16), old_vels(16), accs(16);
+    pos_arm[arm]->getRefSpeeds(old_vels.data());
+    new_vels=old_vels;
+    new_vels[idx_wrist] = 120; // <---- 30 rad/sec could be not right. Try different velocities with the robot motor gui first.
+    pos_arm[arm]->setRefSpeeds(new_vels.data());
 
+    double wrist_position[2];
+    wrist_position[0] = 70; // <---- again choose with the robot motor gui
+    wrist_position[1] = -80; // <---- again choose with the robot motor gui
+
+    double enc_wrist;
+
+    ctrl_mode_arm[arm]->setControlMode(idx_wrist, VOCAB_CM_POSITION);
+    int n_moves = 3; //how many times repeat the wrist move
+    for(int i=0; i<n_moves; i++)
+    {
+        //do back and forth    
+        for(int i_move = 0; i_move<2; i_move++)
+        {
+            //check how much time you will need for that move
+            //You will start to move in the other direction a bit earlier so that the arm does not stop.
+            //Vector current_position(nJnts);
+            enc_arm[arm]->getEncoder(idx_wrist,&enc_wrist);
+
+            double wrist_exec_time = (fabs(enc_wrist - wrist_position[i_move]) / new_vels[idx_wrist]);
+            double currTime=Time::now();
+            
+            pos_arm[arm]->positionMove(idx_wrist,wrist_position[i_move]);
+
+            //split the time delay in many small ones so that it can catch a Ctrl-C
+            while(Time::now() - currTime < wrist_exec_time*0.8)
+            {
+                Time::delay(0.05);
+                enc_arm[arm]->getEncoder(idx_wrist,&enc_wrist);
+            }
+            pos_arm[arm]->stop(idx_wrist);   
+        }
+    }
+
+    // set back to old velocity
+    pos_arm[arm]->setRefSpeeds(old_vels.data());
+}
 
 bool MotorThread::weigh(Bottle &options)
 {
@@ -2104,51 +2163,46 @@ bool MotorThread::weigh(Bottle &options)
     Vector newPos;
 
     Vector init_x(3),init_o(4);
-    Vector new_x(3);
+    Vector new1_x(3), new2_x(3);
     ctrl->getPose(init_x,init_o);
 
+	new1_x = init_x;
+    new1_x[2]-=0.05;
+    new1_x[0]+=0.03;
 
-    init_x[2]-=0.05;
-    init_x[0]+=0.03;
-
-    new_x = init_x;
-    new_x[2]+=0.1;
+    new2_x = init_x;
+    new2_x[2]+=0.1;
 
 
     if(!checkOptions(options,"no_head") && !checkOptions(options,"no_gaze"))
         setGazeIdle();
     
-
-
     for(int i=0; i<9; i++)
     {
         if (i%2==0)
         {
             ctrl->setTrajTime(0.6);
-            ctrl->goToPoseSync(init_x,init_o);
+            ctrl->goToPoseSync(new1_x,init_o);
             Time::delay(0.4);
         }
         else
         {
             ctrl->setTrajTime(0.4);
-            ctrl->goToPoseSync(new_x,init_o);
+            ctrl->goToPoseSync(new2_x,init_o);
             Time::delay(0.4);
         }
 
-    }   
+    }
 
     ctrl->setTrajTime(currTrajTime);
-
+    ctrl->goToPoseSync(init_x,init_o);
+    Time::delay(currTrajTime);
     
     if(!checkOptions(options,"no_head") && !checkOptions(options,"no_gaze"))
         setGazeIdle();
 
     return true;
 }
-
-
-
-
 
 bool MotorThread::play(Bottle &options)
 {

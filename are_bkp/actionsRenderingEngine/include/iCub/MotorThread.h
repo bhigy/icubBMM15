@@ -394,6 +394,7 @@ public:
     bool shiftAndGrasp(Bottle &options);
     bool expect(Bottle &options);
     bool give(Bottle &options);
+    bool wristRotate(Bottle &options);
     bool weigh(Bottle &options);
     bool play(Bottle &options);
     bool startPlay(Bottle &options);
